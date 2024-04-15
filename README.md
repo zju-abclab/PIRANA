@@ -20,12 +20,12 @@ If SEAL or KUKU is not in your path or installed locally, you can try to add `-C
 
 ## Parameters
 | Option             | Description                                         |Default|
-|----------------------|-----------------------------------------------------|-------|
+|------------------------------|---------------------------------------------|-----|
 | --num_payload, -n | Number of payloads in database                      |16384|
 | --payload_size, -x | Byte size of each payload \|pl\|.                   | 256|
-| --is_batch    , -b | Batch-query PIR or single-query PIR     |0(single-query pir)|
+| --is_batch    , -b | Batch-query PIR or single-query PIR.     |0 (single-query PIR)|
 | --num_query   , -l | Number of queries.                      |1|
-| --is_compress , -c | Select parameters optimized for communication or computation.  Available only in batch-query PIR.     |0(Computation friendly)|
+| --is_compress , -c | Select parameters optimized for communication or computation.  Available only in batch-query PIR.     |0 (Computation friendly)|
 
 
 ## Example
