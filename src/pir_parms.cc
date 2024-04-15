@@ -185,7 +185,8 @@ PirParms::PirParms(const uint64_t num_payloads, const uint64_t payload_size,
 
   uint64_t poly_degree = 4096;
   std::vector<int> coeff_modulus = {48, 32, 24};
-  uint64_t plain_prime_len = 17;
+
+  uint64_t plain_prime_len = is_compress? 18 : 17;
 
   set_seal_parms(poly_degree, coeff_modulus, plain_prime_len);
 
