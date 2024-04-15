@@ -48,7 +48,7 @@ std::stringstream Client::gen_query(uint32_t index) {
           _encryptor->encrypt_symmetric(plain_zeros).save(query_stream);
     }
   }
-  std::cout << "Query size: " << query_byte_size / 1024.0 << " KB" << std::endl;
+  // std::cout << "Query size: " << query_byte_size / 1024.0 << " KB" << std::endl;
   return query_stream;
 }
 
@@ -106,9 +106,9 @@ std::stringstream Client::gen_batch_query(
       send_size += _encryptor->encrypt_symmetric(pt).save(query_stream);
     }
   }
-  std::cout << "Send ct size: " << query_ct_size << std::endl;
-  std::cout << "Send query size: " << send_size / 1024.0 << " KBytes "
-            << std::endl;
+  // std::cout << "Send ct size: " << query_ct_size << std::endl;
+  // std::cout << "Send query size: " << send_size / 1024.0 << " KBytes "
+            // << std::endl;
   return query_stream;
 }
 

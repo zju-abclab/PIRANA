@@ -19,15 +19,32 @@ void single_pir_main(const uint64_t num_payloads, const uint64_t payload_size) {
   std::stringstream keys = client.save_keys();
   server.set_keys(keys);
   // only for debug
-  std::stringstream sk = client.send_secret_keys();
-  server.set_decryptor(sk);
+
+  Timer timer;
+  timer.reset();
 
   uint32_t index = rand() % num_payloads;
   std::stringstream query = client.gen_query(index);
+  auto query_time = timer.elapsed();
 
+  timer.reset();
   std::stringstream response = server.gen_response(query);
-  std::vector<std::vector<uint64_t>> answer = client.extract_answer(response);
+  auto response_time = timer.elapsed();
 
+  timer.reset();
+  std::vector<std::vector<uint64_t>> answer = client.extract_answer(response);
+  auto extract_time = timer.elapsed();
+
+  std::cout << "------------------------------------" << std::endl;
+  std::cout << "Performance: " << std::endl;
+  std::cout << "Gen query time: " << query_time << " ms " << std::endl;
+  std::cout << "Gen response time: " << response_time << " ms " << std::endl;
+  std::cout << "Extract answer time: " << extract_time << " ms " << std::endl;
+
+  std::cout << "Query size: " << query.str().size() / 1024.0 << " KBytes"
+            << std::endl;
+  std::cout << "Response size: " << response.str().size() / 1024.0 << " KBytes"
+            << std::endl;
   test_pir_correctness(server, answer, index, pir_parms);
 }
 
@@ -52,16 +69,28 @@ void batch_pir_main(const uint64_t num_payloads, const uint64_t payload_size,
     q = rand() % num_payloads;
   }
   std::stringstream query = batch_client.gen_batch_query(batch_query_index);
-  std::cout << "Gen query time: " << timer.elapsed() << " ms " << std::endl;
+  auto query_time = timer.elapsed();
 
   timer.reset();
   std::stringstream response = batch_server.gen_batch_response(query);
-  std::cout << "Gen response time: " << timer.elapsed() << " ms " << std::endl;
+  auto response_time = timer.elapsed();
 
   timer.reset();
   std::vector<std::vector<uint64_t>> answer =
       batch_client.extract_batch_answer(response);
-  std::cout << "Extract answer time: " << timer.elapsed() << " ms "
+  auto extract_time = timer.elapsed();
+
+  std::cout << "------------------------------------" << std::endl;
+  std::cout << "Performance: " << std::endl;
+  std::cout << "Gen query time: " << query_time << " ms " << std::endl;
+  std::cout << "Gen response time: " << response_time << " ms " << std::endl;
+  std::cout << "Extract answer time: " << extract_time << " ms "
+            << std::endl;
+
+  std::cout << "Query size: " << query.str().size() / 1024.0 << " KBytes"
+            << std::endl;
+
+  std::cout << "Response size: " << response.str().size() / 1024.0 << " KBytes"
             << std::endl;
 
   test_batch_pir_correctness(batch_server, answer, batch_query_index,
@@ -73,7 +102,6 @@ int main(int argc, char *argv[]) {
     show_usage();
     return 0;
   }
-  std::cout << "main " << std::endl;
   // using batch pirana or single pirana
   bool is_batch = false;
 

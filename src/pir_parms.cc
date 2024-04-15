@@ -54,7 +54,7 @@ void PirParms::print_seal_parms() {
   }
 
   std::cout << "/" << std::endl;
-  std::cout << "|   Encryption parameters :" << std::endl;
+  std::cout << "|   Encryption parameters: " << std::endl;
   std::cout << "|   scheme: " << scheme_name << std::endl;
   std::cout << "|   poly_modulus_degree: " << _seal_parms.poly_modulus_degree()
             << std::endl;
@@ -202,14 +202,14 @@ void PirParms::print_pir_parms() {
   std::cout << "--------------------------------------" << std::endl;
   std::cout << "/" << std::endl;
   std::cout << "|   PIR parameters: " << std::endl;
-  std::cout << "|   Number of payloads (n) : " << _num_payloads << std::endl;
-  std::cout << "|   Payload size (|pl|) : " << _payload_size << " Bytes"
+  std::cout << "|   Number of payloads (n): " << _num_payloads << std::endl;
+  std::cout << "|   Payload size (|pl|): " << _payload_size << " Bytes"
             << std::endl;
   std::cout << "|   Number of payload slot: " << _num_payload_slot << std::endl;
-  std::cout << "|   Number of query (L) : " << _num_query << std::endl;
-  std::cout << "|   Col Size : " << _col_size << std::endl;
+  std::cout << "|   Number of query (L): " << _num_query << std::endl;
+  std::cout << "|   Col Size: " << _col_size << std::endl;
 
-  std::cout << "|   Hamming weight (k) : " << _hamming_weight << std::endl;
-  std::cout << "|   Encoding size (m) : " << _encoding_size << std::endl;
+  std::cout << "|   Hamming weight (k): " << _hamming_weight << std::endl;
+  std::cout << "|   Encoding size (m): " << _encoding_size << std::endl;
   std::cout << "\\" << std::endl;
 }

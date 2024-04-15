@@ -315,8 +315,8 @@ std::vector<seal::Ciphertext> Server::rotate_selection_vector(
 
   uint64_t rot_factor = _pre_rotate / have_done;
 
-  std::cout << "Repead times in one ciphertext: " << have_done << std::endl;
-  std::cout << "One to n: " << _pre_rotate << std::endl;
+  // std::cout << "Repead times in one ciphertext: " << have_done << std::endl;
+  // std::cout << "One to n: " << _pre_rotate << std::endl;
   std::vector<seal::Ciphertext> rotated_selection_vectors(
       selection_vectors.size() * rot_factor);
 
@@ -425,7 +425,7 @@ std::vector<seal::Ciphertext> Server::mul_database_with_compress(
     }
     _evaluator->mod_switch_to_inplace(response.at(out_i),
                                       _context->last_parms_id());
-    try_clear_irrelevant_bits(_pir_parms.get_seal_parms(), response.at(out_i));
+    try_clear_irrelevant_bits(_context->last_context_data()->parms(), response.at(out_i));
   }
   return response;
 };
@@ -433,7 +433,6 @@ std::vector<seal::Ciphertext> Server::mul_database_with_compress(
 std::stringstream Server::inner_product(
     const std::vector<seal::Ciphertext> &selection_vector) {
   std::stringstream result;
-  uint64_t result_size = 0;
   auto col_size = _pir_parms.get_col_size();
   auto bundle_size = _pir_parms.get_bundle_size();
   auto num_ct = _pir_parms.get_batch_pir_num_compress_slot();
@@ -465,10 +464,8 @@ std::stringstream Server::inner_product(
     }
   }
   for (auto &i : multi_add_res) {
-    result_size += i.save(result);
+    i.save(result);
   }
-  std::cout << num_ct << std::endl;
-  std::cout << "Response size: " << result_size / 1024.0 << " KB" << std::endl;
   return result;
 }
 
