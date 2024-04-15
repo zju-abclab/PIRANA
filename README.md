@@ -23,9 +23,9 @@ If SEAL or KUKU is not in your path or installed locally, you can try to add `-C
 |----------------------|-----------------------------------------------------|-------|
 | --num_payloads, -n | Number of payloads in database                      |16384|
 | --payload_size, -x | Byte size of each payload \|pl\|.                   | 256|
-| --num_query   , -l | Number of queries to execute.                      |1|
-| --is_batch    , -b | Batch-query pir or single-query pir     |0(single-query pir)|
-| --is_compress , -c | Use only in batch-query pir to choose communication friendly parameters or computation friendly parameters.      |0(Computation friendly)|
+| --is_batch    , -b | Batch-query PIR or single-query PIR     |0(single-query pir)|
+| --num_query   , -l | Number of queries.                      |1|
+| --is_compress , -c | Select parameters optimized for communication or computation.  Available only in batch-query PIR.     |0(Computation friendly)|
 
 
 ## Example
