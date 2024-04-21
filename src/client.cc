@@ -22,8 +22,20 @@ Client::Client(/* args */ PirParms &pir_parms) : _pir_parms(pir_parms) {
 std::stringstream Client::gen_query(uint32_t index) {
   std::stringstream query_stream;
   uint64_t query_byte_size = 0;
-  // random generate query index for testing
-  // std::cout << index << std::endl;
+  auto n = _pir_parms.get_num_payloads();
+  if( n < _N)
+  {
+    uint32_t repeat_times = _N / n;
+    std::vector<uint64_t> query(_N,0);
+    for(uint32_t i = 0 ; i <repeat_times; i++)
+    {
+      query.at(i * n + index) = 1;
+    }
+    seal::Plaintext plain;
+    _batch_encoder->encode(query,plain);
+    query_byte_size += _encryptor->encrypt_symmetric(plain).save(query_stream);
+  }
+  else{
   uint32_t row = index % _N;
   uint32_t col_index = index / _N;
   std::vector<uint32_t> cw_index = get_perfect_constant_weight_codeword(
@@ -47,6 +59,7 @@ std::stringstream Client::gen_query(uint32_t index) {
       query_byte_size +=
           _encryptor->encrypt_symmetric(plain_zeros).save(query_stream);
     }
+  }
   }
   // std::cout << "Query size: " << query_byte_size / 1024.0 << " KB" << std::endl;
   return query_stream;

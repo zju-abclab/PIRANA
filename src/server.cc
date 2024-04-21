@@ -79,56 +79,95 @@ void Server::gen_random_db() {
     pi++;
   }
 }
+
 // used for PIR single query
 void Server::encode_to_ntt_db() {
   assert(_set_db && "Database has not been loaded correctly!");
-  std::cout << "Encode database!" << std::endl;
-  auto plaintext_size =
-      _pir_parms.get_col_size() * _pir_parms.get_num_payload_slot();
-  // (col_size, num_slot)
-  _encoded_db.resize(plaintext_size);
+  std::cout << "Encoding database!" << std::endl;
+
   auto N = _pir_parms.get_seal_parms().poly_modulus_degree();
+  auto n = _pir_parms.get_num_payloads();
+  auto repeat_time = N < n ? 1 : N / n;
+
+  auto plaintext_size =
+      (_pir_parms.get_col_size() *
+                _pir_parms.get_num_payload_slot() );
+
+  _encoded_db.resize(plaintext_size);
   std::vector<uint64_t> plain_vector(N, 0);
 
-  int rotate_step = 0;
-
   auto half_N = N / 2;
-  bool rotate_column = 0;
-  auto rotate_time = 0;
-  for (uint64_t pl_slot_index = 0;
-       pl_slot_index < _pir_parms.get_num_payload_slot(); pl_slot_index++) {
-    for (uint64_t col_index = 0; col_index < _pir_parms.get_col_size();
-         col_index++) {
-      seal::Plaintext encoded_plain;
-      for (uint32_t i = 0, rotate_index = rotate_step; i < half_N;
-           i++, rotate_index++) {
-        auto raw_db_index =
-            rotate_column ? col_index * N + i + half_N : col_index * N + i;
-        plain_vector.at(rotate_index % half_N) =
-            _raw_db.at(raw_db_index).at(pl_slot_index);
-      }
-      for (uint32_t i = 0, rotate_index = rotate_step; i < half_N;
-           i++, rotate_index++) {
-        auto raw_db_index =
-            rotate_column ? col_index * N + i : col_index * N + i + half_N;
-        plain_vector.at(rotate_index % half_N + half_N) =
-            _raw_db.at(raw_db_index).at(pl_slot_index);
+
+
+  int rotate_step = 0;
+  if (repeat_time == 1) {
+
+    bool rotate_column = 0;
+    auto rotate_time = 0;
+    for (uint64_t pl_slot_index = 0;
+         pl_slot_index < _pir_parms.get_num_payload_slot(); pl_slot_index++) {
+      for (uint64_t col_index = 0; col_index < _pir_parms.get_col_size();
+           col_index++) {
+        seal::Plaintext encoded_plain;
+        for (uint32_t i = 0, rotate_index = rotate_step; i < half_N;
+             i++, rotate_index++) {
+          auto raw_db_index =
+              rotate_column ? col_index * N + i + half_N : col_index * N + i;
+          plain_vector.at(rotate_index % half_N) =
+              _raw_db.at(raw_db_index).at(pl_slot_index);
+        }
+        for (uint32_t i = 0, rotate_index = rotate_step; i < half_N;
+             i++, rotate_index++) {
+          auto raw_db_index =
+              rotate_column ? col_index * N + i : col_index * N + i + half_N;
+          plain_vector.at(rotate_index % half_N + half_N) =
+              _raw_db.at(raw_db_index).at(pl_slot_index);
+        }
+
+        _batch_encoder->encode(plain_vector, encoded_plain);
+        _evaluator->transform_to_ntt_inplace(encoded_plain,
+                                             _context->first_parms_id());
+        _encoded_db.at(pl_slot_index * _pir_parms.get_col_size() + col_index) =
+            encoded_plain;
       }
 
+      rotate_step += _pir_parms.get_rotate_step();
+      rotate_step = rotate_step % half_N;
+      rotate_time++;
+      if (rotate_time % (_pir_parms.get_pre_rotate() / 2) == 0) {
+        rotate_column = !rotate_column;
+      }
+    }
+  } else {
+    auto after_compress_slot =
+        std::ceil((double)_pir_parms.get_num_payload_slot() / repeat_time);
+    for (uint64_t pl_slot_index = 0; pl_slot_index < after_compress_slot;
+         pl_slot_index++) {
+      seal::Plaintext encoded_plain;
+      uint32_t repeat_slot = 0;
+       for (uint32_t i = 0, rotate_index = rotate_step; i < half_N;
+             i++, rotate_index++) {
+          auto raw_db_index = i % n;
+          auto slot = i / n;
+          plain_vector.at(rotate_index % half_N) =
+              _raw_db.at(raw_db_index).at(slot + pl_slot_index * repeat_time);
+        }
+        for (uint32_t i = 0, rotate_index = rotate_step; i < half_N;
+             i++, rotate_index++) {
+          auto raw_db_index = i % n;
+          auto slot = i / n;
+          plain_vector.at(rotate_index % half_N + half_N) =
+              _raw_db.at(raw_db_index).at(slot + pl_slot_index * repeat_time + repeat_time/2);
+        }
       _batch_encoder->encode(plain_vector, encoded_plain);
       _evaluator->transform_to_ntt_inplace(encoded_plain,
                                            _context->first_parms_id());
-      _encoded_db.at(pl_slot_index * _pir_parms.get_col_size() + col_index) =
-          encoded_plain;
+      _encoded_db.at(pl_slot_index) = encoded_plain;
     }
-
     rotate_step += _pir_parms.get_rotate_step();
     rotate_step = rotate_step % half_N;
-    rotate_time++;
-    if (rotate_time % (_pir_parms.get_pre_rotate() / 2) == 0) {
-      rotate_column = !rotate_column;
-    }
   }
+  std::cout << "Encoding END!" << std::endl;
 };
 
 // used for batch encode
@@ -425,7 +464,8 @@ std::vector<seal::Ciphertext> Server::mul_database_with_compress(
     }
     _evaluator->mod_switch_to_inplace(response.at(out_i),
                                       _context->last_parms_id());
-    try_clear_irrelevant_bits(_context->last_context_data()->parms(), response.at(out_i));
+    try_clear_irrelevant_bits(_context->last_context_data()->parms(),
+                              response.at(out_i));
   }
   return response;
 };

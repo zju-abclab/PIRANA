@@ -30,6 +30,8 @@ private:
   std::chrono::high_resolution_clock::time_point _start, _end;
 };
 
+uint32_t next_power_of_2(uint32_t n);
+
 uint64_t choose(uint64_t n, uint64_t k);
 
 uint64_t choose_rotate_parms(const uint64_t &N, const uint64_t &num_payload_slot,

@@ -2,6 +2,18 @@
 
 #include <assert.h>
 #include <cmath>
+uint32_t next_power_of_2(uint32_t n) {
+    // If the input number is already a power of 2, return it
+    if (n && !(n & (n - 1)))
+        return n;
+
+    // Set all bits to the right of the most significant bit
+    while (n & (n - 1))
+        n &= n - 1;
+
+    // Left shift by 1 and add 1 to get the next power of 2 greater than the input number
+    return n << 1;
+}
 uint64_t calculate_encoding_size(uint64_t col_size, uint64_t hamming_weight)
 {
   uint64_t encoding_size = 2;

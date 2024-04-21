@@ -7,7 +7,8 @@
 #include "utils.h"
 
 PirParms::PirParms(const uint64_t num_payloads, const uint64_t payload_size)
-    : _num_payloads(num_payloads), _payload_size(payload_size), _num_query(1) {
+    : _payload_size(payload_size), _num_query(1) {
+  _num_payloads = next_power_of_2(num_payloads);
   uint64_t poly_degree = 8192;
   std::vector<int> coeff_modulus = {56, 56, 24, 24};
   uint64_t plain_prime_len = 31;
