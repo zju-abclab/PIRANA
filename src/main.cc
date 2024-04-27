@@ -20,6 +20,9 @@ void single_pir_main(const uint64_t num_payloads, const uint64_t payload_size) {
   server.set_keys(keys);
   // only for debug
 
+  auto sk = client.send_secret_keys();
+  server.set_decryptor(sk);
+
   Timer timer;
   timer.reset();
 

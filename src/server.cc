@@ -70,7 +70,8 @@ void Server::gen_random_db() {
       // unsafe random generate, just for generating a test database
       data = rand() & plain_mask;
       // data = test_i & plain_mask;
-      data = data == 0 ? 1 : data;
+      // data = pi & plain_mask;
+      data = data == 0 ? 8888 : data;
       // assert for test
       assert(data < plain_modulus && data != 0);
 
@@ -89,21 +90,23 @@ void Server::encode_to_ntt_db() {
   auto n = _pir_parms.get_num_payloads();
   auto repeat_time = N < n ? 1 : N / n;
 
-  auto plaintext_size =
-      (_pir_parms.get_col_size() *
-                _pir_parms.get_num_payload_slot() );
+  auto real_rotate = _pre_rotate / repeat_time;
 
+  auto plaintext_size =
+      std::ceil(_pir_parms.get_col_size() * _pir_parms.get_num_payload_slot() /
+                (double)_pre_rotate) *
+      real_rotate;
+  std::cout << "plaintext_size"
+            << " " << plaintext_size << std::endl;
   _encoded_db.resize(plaintext_size);
   std::vector<uint64_t> plain_vector(N, 0);
 
   auto half_N = N / 2;
 
-
   int rotate_step = 0;
+  auto rotate_time = 0;
   if (repeat_time == 1) {
-
     bool rotate_column = 0;
-    auto rotate_time = 0;
     for (uint64_t pl_slot_index = 0;
          pl_slot_index < _pir_parms.get_num_payload_slot(); pl_slot_index++) {
       for (uint64_t col_index = 0; col_index < _pir_parms.get_col_size();
@@ -139,33 +142,44 @@ void Server::encode_to_ntt_db() {
       }
     }
   } else {
-    auto after_compress_slot =
-        std::ceil((double)_pir_parms.get_num_payload_slot() / repeat_time);
-    for (uint64_t pl_slot_index = 0; pl_slot_index < after_compress_slot;
+    for (uint64_t pl_slot_index = 0; pl_slot_index < plaintext_size;
          pl_slot_index++) {
       seal::Plaintext encoded_plain;
-      uint32_t repeat_slot = 0;
-       for (uint32_t i = 0, rotate_index = rotate_step; i < half_N;
-             i++, rotate_index++) {
-          auto raw_db_index = i % n;
-          auto slot = i / n;
-          plain_vector.at(rotate_index % half_N) =
-              _raw_db.at(raw_db_index).at(slot + pl_slot_index * repeat_time);
+      for (uint32_t i = 0, rotate_index = rotate_step; i < half_N;
+           i++, rotate_index++) {
+        auto raw_db_index = i % n;
+        auto slot = rotate_time + real_rotate * (i / n);
+
+        if (slot >= _pir_parms.get_num_payload_slot()) {
+          plain_vector.at(rotate_index % half_N + half_N) = 0;
+          continue;
         }
-        for (uint32_t i = 0, rotate_index = rotate_step; i < half_N;
-             i++, rotate_index++) {
-          auto raw_db_index = i % n;
-          auto slot = i / n;
-          plain_vector.at(rotate_index % half_N + half_N) =
-              _raw_db.at(raw_db_index).at(slot + pl_slot_index * repeat_time + repeat_time/2);
+        plain_vector.at(rotate_index % half_N) =
+            _raw_db.at(raw_db_index).at(slot);
+      }
+      for (uint32_t i = 0, rotate_index = rotate_step; i < half_N;
+           i++, rotate_index++) {
+        auto raw_db_index = i % n;
+        auto slot = rotate_time + real_rotate * (i / n) + _pre_rotate / 2;
+        if (slot >= _pir_parms.get_num_payload_slot()) {
+          plain_vector.at(rotate_index % half_N + half_N) = 0;
+          continue;
         }
+        plain_vector.at(rotate_index % half_N + half_N) =
+            _raw_db.at(raw_db_index).at(slot);
+      }
       _batch_encoder->encode(plain_vector, encoded_plain);
       _evaluator->transform_to_ntt_inplace(encoded_plain,
                                            _context->first_parms_id());
       _encoded_db.at(pl_slot_index) = encoded_plain;
+      rotate_step += _pir_parms.get_rotate_step();
+      rotate_step = rotate_step % half_N;
+      rotate_time++;
+      if (rotate_time % real_rotate == 0) {
+        rotate_step = 0;
+        rotate_time += _pre_rotate - real_rotate;
+      }
     }
-    rotate_step += _pir_parms.get_rotate_step();
-    rotate_step = rotate_step % half_N;
   }
   std::cout << "Encoding END!" << std::endl;
 };
@@ -297,19 +311,19 @@ std::vector<seal::Ciphertext> Server::gen_selection_vector(
   selection_vector.resize(col_size);
   uint64_t encoding_size = _pir_parms.get_encoding_size();
   uint64_t col_index = 0;
-  // Todo: now only support hamming weight k = 2
-  // Try to support more k
-  for (uint64_t i_1 = 1; i_1 < encoding_size && col_index < col_size; i_1++) {
-    for (uint64_t i_2 = 0; i_2 < i_1 && col_index < col_size; i_2++) {
-      multiply(*_context, query.at(i_1), query.at(i_2),
-               selection_vector.at(col_index));
-      _evaluator->relinearize_inplace(selection_vector.at(col_index),
-                                      _relin_keys);
-      col_index++;
+  if (encoding_size == 1) {
+    selection_vector[0] = query[0];
+  } else {
+    for (uint64_t i_1 = 1; i_1 < encoding_size && col_index < col_size; i_1++) {
+      for (uint64_t i_2 = 0; i_2 < i_1 && col_index < col_size; i_2++) {
+        multiply(*_context, query.at(i_1), query.at(i_2),
+                 selection_vector.at(col_index));
+        _evaluator->relinearize_inplace(selection_vector.at(col_index),
+                                        _relin_keys);
+        col_index++;
+      }
     }
   }
-  // Todo: test selection vector debug
-  // selection_vector_debug(selection_vector);
   return selection_vector;
 }
 
@@ -349,8 +363,7 @@ std::vector<seal::Ciphertext> Server::rotate_selection_vector(
     const std::vector<seal::Ciphertext> &selection_vectors) {
   // Todo: make sure have_done computed correctly
   // Add some explanation comments
-  uint64_t have_done =
-      std::max(1, (int)std::floor((double)_N / _pir_parms.get_num_payloads()));
+  uint64_t have_done = std::max(1, int(_N / _pir_parms.get_num_payloads()));
 
   uint64_t rot_factor = _pre_rotate / have_done;
 
@@ -396,15 +409,15 @@ std::vector<seal::Ciphertext> Server::rotate_selection_vector(
     // The first row and the second row in the BFV ciphertext is same.
     // Don't need to swap rows.
     uint64_t todo = _pre_rotate / have_done;
-    for (uint64_t sv_i = 0; sv_i < selection_vectors.size(); sv_i++) {
-      rotated_selection_vectors[sv_i * todo] = selection_vectors[sv_i];
-      for (uint64_t j = 0; j < todo - 1; j++) {
-        _evaluator->rotate_rows(selection_vectors[sv_i],
-                                -_pre_rot_steps * (j + 1), _galois_keys,
-                                rotated_selection_vectors[sv_i * todo + j + 1]);
-      }
+    assert(selection_vectors.size() == 1);
+    rotated_selection_vectors[0] = selection_vectors[0];
+    for (uint64_t j = 0; j < todo - 1; j++) {
+      _evaluator->rotate_rows(rotated_selection_vectors[j], -_pre_rot_steps,
+                              _galois_keys, rotated_selection_vectors[j + 1]);
     }
   }
+
+  // selection_vector_debug(rotated_selection_vectors);
   for (auto &c : rotated_selection_vectors)
     _evaluator->transform_to_ntt_inplace(c);
   return rotated_selection_vectors;
@@ -417,14 +430,14 @@ std::vector<seal::Ciphertext> Server::mul_database_with_compress(
   uint64_t num_output_ciphers =
       std::ceil((double)_pir_parms.get_num_payload_slot() / _N);
 
-  uint64_t merge_in_one_ct =
-      std::max(1, (int)(_N / _pir_parms.get_num_payloads()));
+  uint64_t repeat_time = std::max(1, (int)(_N / _pir_parms.get_num_payloads()));
 
-  uint64_t rot_expand = _pre_rotate / merge_in_one_ct;
-  assert(rot_expand * _pir_parms.get_col_size() ==
+  uint64_t real_rotate = _pre_rotate / repeat_time;
+  assert(real_rotate * _pir_parms.get_col_size() ==
          rotated_selection_vectors.size());
   uint64_t total_mul =
-      std::ceil((double)_pir_parms.get_num_payload_slot() / merge_in_one_ct);
+      std::ceil((double)_pir_parms.get_num_payload_slot() / _pre_rotate) *
+      _pre_rotate;
   uint64_t rot = _N / _pre_rotate;
 
   uint64_t total_rot =
@@ -440,11 +453,11 @@ std::vector<seal::Ciphertext> Server::mul_database_with_compress(
       seal::Ciphertext mul_result;
       seal::Ciphertext sum_result;
 
-      for (uint64_t mul_i = 0; mul_i < rot_expand && mul_count < total_mul;
+      for (uint64_t mul_i = 0; mul_i < real_rotate && mul_count < total_mul;
            mul_i++, mul_count++) {
         for (uint64_t col_i = 0; col_i < _pir_parms.get_col_size(); col_i++) {
           _evaluator->multiply_plain(
-              rotated_selection_vectors.at(col_i * rot_expand + mul_i),
+              rotated_selection_vectors.at(col_i * real_rotate + mul_i),
               _encoded_db.at(mul_count * _pir_parms.get_col_size() + col_i),
               mul_result);
           if (col_i == 0 && mul_i == 0) {

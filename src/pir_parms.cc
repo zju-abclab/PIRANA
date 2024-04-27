@@ -14,8 +14,12 @@ PirParms::PirParms(const uint64_t num_payloads, const uint64_t payload_size)
   uint64_t plain_prime_len = 31;
 
   set_seal_parms(poly_degree, coeff_modulus, plain_prime_len);
-  _col_size = ceil(num_payloads / _seal_parms.poly_modulus_degree());
-  _encoding_size = calculate_encoding_size(_col_size);
+  _col_size = std::ceil(num_payloads * 1.0 / _seal_parms.poly_modulus_degree());
+  if (_num_payloads < _seal_parms.poly_modulus_degree()) {
+    _encoding_size = 1;
+  } else {
+    _encoding_size = calculate_encoding_size(_col_size);
+  }
 
   _num_payload_slot = std::ceil(payload_size * 8.0 / (plain_prime_len - 1));
 
@@ -24,8 +28,8 @@ PirParms::PirParms(const uint64_t num_payloads, const uint64_t payload_size)
   // if n is smaller than the poly degree
   if (std::floor(poly_degree / num_payloads)) {
     // duplicate the selection vector to fill the n slots
-    _pre_rotate =
-        std::max(_pre_rotate, uint64_t(std::floor(poly_degree / num_payloads)));
+    _pre_rotate = std::max(
+        _pre_rotate, uint64_t(std::floor(poly_degree * 1.0 / num_payloads)));
   }
 
   assert(poly_degree % _pre_rotate == 0 && "Wrong parameters selection!");

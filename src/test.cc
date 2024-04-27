@@ -31,6 +31,7 @@ void test_pir_correctness(Server &server,
             (k * pir_parms.get_rotate_step() + j + offset) % half_N;
         auto response_item = answer[i][index % N];
         auto plain_item = real_item[count];
+        // std::cout << count << " " << response_item << std::endl;
         assert(plain_item == response_item);
         count++;
       }
@@ -42,12 +43,21 @@ void test_pir_correctness(Server &server,
         auto response_item = answer[i][index % N];
         auto plain_item = real_item[count];
 
+        // std::cout << count << " " << response_item << std::endl;
         assert(plain_item == response_item);
         count++;
       }
     }
     left_rotate_slot -= pir_parms.get_rotate_step();
   }
+  // uint32_t c = 0;
+  // for (uint32_t i = 0; i < N; i++) {
+  //   if (answer[0][i] != 0) {
+  //     std::cout << i << " " << answer[0][i] << std::endl;
+  //     c++;
+  //   }
+  // }
+  // std::cout << "All " << c << std::endl;
 }
 
 void test_batch_pir_correctness(Server &server,
