@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
 project(PIRexamples VERSION 1.0.0 LANGUAGES CXX)
 
-find_package(SEAL 4.1.1 EXACT REQUIRED)
+find_package(SEAL 4.0.0 EXACT REQUIRED)
 find_package(Kuku 2.1 QUIET REQUIRED)
 
 if(NOT Kuku_FOUND)

@@ -1,7 +1,7 @@
 rm -r single_query_test_log
 mkdir single_query_test_log
 cd single_query_test_log
-for ((i = 13 ; i <= 16; i++)) 
+for ((i = 8 ; i <= 16; i++)) 
 do
     for j in 1 
     do

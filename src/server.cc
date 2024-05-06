@@ -92,12 +92,17 @@ void Server::encode_to_ntt_db() {
 
   auto real_rotate = _pre_rotate / repeat_time;
 
-  auto plaintext_size =
-      std::ceil(_pir_parms.get_col_size() * _pir_parms.get_num_payload_slot() /
-                (double)_pre_rotate) *
-      real_rotate;
-  std::cout << "plaintext_size"
-            << " " << plaintext_size << std::endl;
+  uint32_t plaintext_size;
+  if (repeat_time != 1) {
+    plaintext_size =
+        std::ceil(_pir_parms.get_col_size() *
+                  _pir_parms.get_num_payload_slot() / (double)_pre_rotate) *
+        real_rotate;
+  } else {
+    plaintext_size =
+        _pir_parms.get_col_size() * _pir_parms.get_num_payload_slot();
+  }
+
   _encoded_db.resize(plaintext_size);
   std::vector<uint64_t> plain_vector(N, 0);
 
@@ -435,9 +440,15 @@ std::vector<seal::Ciphertext> Server::mul_database_with_compress(
   uint64_t real_rotate = _pre_rotate / repeat_time;
   assert(real_rotate * _pir_parms.get_col_size() ==
          rotated_selection_vectors.size());
-  uint64_t total_mul =
-      std::ceil((double)_pir_parms.get_num_payload_slot() / _pre_rotate) *
-      _pre_rotate;
+  uint64_t total_mul = 0;
+  if (repeat_time == 1) {
+    total_mul = _pir_parms.get_num_payload_slot();
+  } else {
+    total_mul =
+        std::ceil((double)_pir_parms.get_num_payload_slot() / _pre_rotate) *
+        _pre_rotate;
+  }
+
   uint64_t rot = _N / _pre_rotate;
 
   uint64_t total_rot =
