@@ -4,7 +4,7 @@ PIRANA is a research library and should not be used in production systems.
 This repository contains the implementation of both single-query PIR and multi-query PIR proposed in the [paper](https://eprint.iacr.org/2022/1401).
 
 ## Dependencies
-- Microsoft SEAL (version=4.1.1)
+- Microsoft SEAL (version>=4.0.0)
 - Microsoft Kuku (version=2.1.0)
 
 [Microsoft SEAL](https://github.com/microsoft/SEAL) and [Microsoft Kuku](https://github.com/microsoft/Kuku) can be installed using the instructions outlined in the repository.
