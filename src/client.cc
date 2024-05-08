@@ -87,7 +87,7 @@ std::stringstream Client::gen_batch_query(
           _pir_parms.get_cuckoo_table()->query(kuku::make_item(0, q));
       auto loc = res.location();
       auto cw = _pir_parms.get_cw(
-          std::to_string(q * _pir_parms.get_table_size() + loc));
+          std::to_string(uint64_t(q) * _pir_parms.get_table_size() + loc));
       cw_query[cw.first * bundle_size + loc / _N][loc % _N] = 1;
       cw_query[cw.second * bundle_size + loc / _N][loc % _N] = 1;
     }
